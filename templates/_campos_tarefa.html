@@ -1,0 +1,25 @@
+{# Campos compartilhados entre "nova tarefa" e "editar tarefa"; `t` é None ao criar #}
+<label class="campo grande">Título
+  <input type="text" name="titulo" maxlength="150" required
+         value="{{ t.titulo if t else '' }}" placeholder="Ex.: Entregar trabalho de PW3" />
+</label>
+<label class="campo">Matéria
+  <select name="materia_id" required>
+    {% for m in materias %}
+      <option value="{{ m.id }}" {% if (t and t.materia_id == m.id) or (not t and m.id == materia_id) %}selected{% endif %}>{{ m.nome }}</option>
+    {% endfor %}
+  </select>
+</label>
+<label class="campo">Prazo
+  <input type="date" name="prazo" value="{{ t.prazo.isoformat() if t and t.prazo else '' }}" />
+</label>
+<label class="campo">Prioridade
+  <select name="prioridade">
+    {% for chave, nome in PRIORIDADES.items() %}
+      <option value="{{ chave }}" {% if (t.prioridade if t else 'media') == chave %}selected{% endif %}>{{ nome }}</option>
+    {% endfor %}
+  </select>
+</label>
+<label class="campo grande">Descrição (opcional)
+  <textarea name="descricao" rows="2">{{ t.descricao if t else '' }}</textarea>
+</label>

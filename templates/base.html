@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block titulo %}EduTrack{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  </head>
+  <body>
+    <header class="topo">
+      <a class="logo" href="{{ url_for('index') }}">🎓 EduTrack</a>
+    </header>
+
+    <main class="container">
+      {% with mensagens = get_flashed_messages(with_categories=true) %}
+        {% for categoria, texto in mensagens %}
+          <div class="aviso {{ categoria }}" role="status">{{ texto }}</div>
+        {% endfor %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="rodape">© 2026 EduTrack - Léo ADS</footer>
+  </body>
+</html>

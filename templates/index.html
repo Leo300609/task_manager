@@ -1,17 +1,106 @@
-<!doctype html>
-<html lang="pt-br">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EduTrack</title>
-  </head>
-  <body>
-    <h1>Bem vindo, {{ nome_aluno }}!</h1>
-    <p>Você está cursando:</p>
-    <ul>
+{% extends 'base.html' %}
+{% block content %}
+<h1>Olá, {{ nome_aluno }}! 👋</h1>
+
+<section class="resumo" aria-label="Resumo">
+  <div class="cartao"><strong>{{ resumo.total }}</strong><span>Total</span></div>
+  <div class="cartao"><strong>{{ resumo.pendentes }}</strong><span>Pendentes</span></div>
+  <div class="cartao {% if resumo.atrasadas %}alerta{% endif %}"><strong>{{ resumo.atrasadas }}</strong><span>Atrasadas</span></div>
+  <div class="cartao"><strong>{{ resumo.concluidas }}</strong><span>Concluídas</span></div>
+</section>
+<div class="barra" role="progressbar" aria-valuenow="{{ resumo.progresso }}" aria-valuemin="0" aria-valuemax="100" aria-label="Progresso geral">
+  <div style="width: {{ resumo.progresso }}%"></div>
+</div>
+<p class="legenda">{{ resumo.progresso }}% das tarefas concluídas</p>
+
+<div class="layout">
+  <aside>
+    <h2>Matérias</h2>
+    <ul class="lista-materias">
+      <li class="{% if not materia_id %}ativa{% endif %}">
+        <a href="{{ url_for('index', status=status if status != 'todas' else None, q=busca or None) }}">Todas</a>
+      </li>
       {% for m in materias %}
-      <li>{{m}}</li>
+      <li class="{% if m.id == materia_id %}ativa{% endif %}">
+        <a href="{{ url_for('index', materia=m.id, status=status if status != 'todas' else None, q=busca or None) }}">{{ m.nome }}</a>
+        <span class="contagem" title="Tarefas pendentes">{{ pendentes_por_materia[m.id] }}</span>
+        <form method="post" action="{{ url_for('excluir_materia', id=m.id) }}"
+              onsubmit="return confirm('Excluir a matéria e todas as suas tarefas?')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+          <button class="icone perigo" title="Excluir matéria" aria-label="Excluir matéria {{ m.nome }}">✕</button>
+        </form>
+      </li>
       {% endfor %}
     </ul>
-  </body>
-</html>
+
+    <form method="post" action="{{ url_for('nova_materia') }}" class="linha">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+      <input type="text" name="nome" maxlength="100" required placeholder="Nova matéria..." aria-label="Nome da nova matéria" />
+      <button type="submit">+</button>
+    </form>
+  </aside>
+
+  <section>
+    {% if materias %}
+    <details class="nova" {% if not tarefas and not busca %}open{% endif %}>
+      <summary>+ Nova tarefa</summary>
+      <form method="post" action="{{ url_for('nova_tarefa') }}" class="grade">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+        <input type="hidden" name="voltar" value="{{ request.full_path.rstrip('?') }}" />
+        {% set t = None %}{% include '_campos_tarefa.html' %}
+        <button type="submit" class="primario">Adicionar tarefa</button>
+      </form>
+    </details>
+    {% else %}
+    <p class="vazio">Cadastre sua primeira matéria ao lado para começar a criar tarefas.</p>
+    {% endif %}
+
+    <form method="get" class="filtros">
+      {% if materia_id %}<input type="hidden" name="materia" value="{{ materia_id }}" />{% endif %}
+      <input type="search" name="q" value="{{ busca }}" placeholder="Buscar tarefa..." aria-label="Buscar tarefa" />
+      <select name="status" aria-label="Filtrar por status" onchange="this.form.submit()">
+        {% for chave, nome in STATUS.items() %}
+          <option value="{{ chave }}" {% if chave == status %}selected{% endif %}>{{ nome }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Filtrar</button>
+    </form>
+
+    <ul class="tarefas">
+      {% for t in tarefas %}
+      <li class="tarefa prio-{{ t.prioridade }} {% if t.concluida %}feita{% endif %}">
+        <form method="post" action="{{ url_for('alternar_tarefa', id=t.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+          <input type="hidden" name="voltar" value="{{ request.full_path.rstrip('?') }}" />
+          <button class="check" title="{{ 'Reabrir' if t.concluida else 'Concluir' }}"
+                  aria-label="{{ 'Reabrir' if t.concluida else 'Concluir' }} tarefa {{ t.titulo }}">{{ '✔' if t.concluida else '' }}</button>
+        </form>
+        <div class="corpo">
+          <strong class="titulo">{{ t.titulo }}</strong>
+          <div class="meta">
+            <span class="etiqueta">{{ t.materia.nome }}</span>
+            <span class="etiqueta prio">{{ PRIORIDADES[t.prioridade] }}</span>
+            {% if t.prazo %}
+              <span class="prazo {% if t.atrasada %}atrasada{% endif %}">
+                📅 {{ t.prazo.strftime('%d/%m/%Y') }}{% if t.atrasada %} · atrasada{% elif t.prazo == hoje and not t.concluida %} · hoje{% endif %}
+              </span>
+            {% endif %}
+          </div>
+          {% if t.descricao %}<p class="descricao">{{ t.descricao }}</p>{% endif %}
+        </div>
+        <div class="acoes">
+          <a class="botao" href="{{ url_for('editar_tarefa', id=t.id) }}">Editar</a>
+          <form method="post" action="{{ url_for('excluir_tarefa', id=t.id) }}" onsubmit="return confirm('Excluir esta tarefa?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+            <input type="hidden" name="voltar" value="{{ request.full_path.rstrip('?') }}" />
+            <button class="perigo">Excluir</button>
+          </form>
+        </div>
+      </li>
+      {% else %}
+      <li class="vazio">Nenhuma tarefa por aqui. {% if busca or status != 'todas' or materia_id %}Tente limpar os filtros.{% endif %}</li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}

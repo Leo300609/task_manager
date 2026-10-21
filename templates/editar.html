@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block titulo %}Editar tarefa · EduTrack{% endblock %}
+{% block content %}
+<h1>Editar tarefa</h1>
+<form method="post" class="grade nova">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+  {% set materia_id = None %}{% include '_campos_tarefa.html' %}
+  <div class="acoes">
+    <button type="submit" class="primario">Salvar</button>
+    <a class="botao" href="{{ url_for('index') }}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
